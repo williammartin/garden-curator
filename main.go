@@ -28,9 +28,11 @@ var GrowCommand = cli.Command{
 		}
 
 		client := gclient.New(gconn.New("tcp", "10.244.0.2:7777"))
-		_, err = client.Create(garden.ContainerSpec{Handle: blueprint.Containers[0]})
-		if err != nil {
-			return err
+		for _, handle := range blueprint.Containers {
+			_, err = client.Create(garden.ContainerSpec{Handle: handle})
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	},
