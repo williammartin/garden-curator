@@ -22,9 +22,9 @@ var _ = AfterSuite(func() {
 	gexec.CleanupBuildArtifacts()
 })
 
-func execCurator(cwd string, args ...string) *gexec.Session {
-	cmd := exec.Command(curatorBin, args...)
-	cmd.Dir = cwd
+func execCurator(runConfig *CuratorRunConfig) *gexec.Session {
+	cmd := exec.Command(curatorBin, runConfig.Args...)
+	cmd.Dir = runConfig.RunDir
 	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 	return session

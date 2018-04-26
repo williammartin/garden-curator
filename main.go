@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -14,9 +15,20 @@ import (
 
 var GrowCommand = cli.Command{
 	Name: "grow",
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "blueprint, b",
+			Usage: "The filepath to a blueprint.yml.",
+		},
+	},
 	Action: func(ctx *cli.Context) error {
+		blueprintFile := ctx.String("blueprint")
+		if blueprintFile == "" {
+			blueprintFile = "blueprint.yml"
+		}
+
 		// unmarshal yml
-		bytes, err := ioutil.ReadFile("blueprint.yml")
+		bytes, err := ioutil.ReadFile(blueprintFile)
 		if err != nil {
 			return err
 		}
@@ -29,6 +41,7 @@ var GrowCommand = cli.Command{
 
 		client := gclient.New(gconn.New("tcp", "10.244.0.2:7777"))
 		for _, handle := range blueprint.Containers {
+			fmt.Printf("growing '%s'...\n", handle)
 			_, err = client.Create(garden.ContainerSpec{Handle: handle})
 			if err != nil {
 				return err

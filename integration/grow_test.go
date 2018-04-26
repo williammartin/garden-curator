@@ -15,11 +15,19 @@ import (
 	gconn "code.cloudfoundry.org/garden/client/connection"
 )
 
+type CuratorRunConfig struct {
+	RunDir string
+	Args   []string
+}
+
 var _ = Describe("Growing", func() {
 
 	var (
-		tempDir string
-		client  garden.Client
+		client garden.Client
+
+		tempDir          string
+		curatorRunConfig *CuratorRunConfig
+		stdout           string
 
 		blueprint *bprint.Blueprint
 	)
@@ -29,6 +37,11 @@ var _ = Describe("Growing", func() {
 		tempDir, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
+		curatorRunConfig = &CuratorRunConfig{
+			RunDir: tempDir,
+			Args:   []string{"grow"},
+		}
+
 		client = gclient.New(gconn.New("tcp", "10.244.0.2:7777"))
 	})
 
@@ -37,8 +50,9 @@ var _ = Describe("Growing", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ioutil.WriteFile(filepath.Join(tempDir, "blueprint.yml"), bytes, 0755)).To(Succeed())
 
-		session := execCurator(tempDir, "grow")
+		session := execCurator(curatorRunConfig)
 		session.Wait()
+		stdout = string(session.Out.Contents())
 	})
 
 	AfterEach(func() {
@@ -71,6 +85,28 @@ var _ = Describe("Growing", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(containers).To(HaveLen(3))
 			Expect(containersToHandles(containers)).To(ConsistOf("base", "ace", "keith"))
+		})
+
+		It("logs feedback that each container is being created", func() {
+			Expect(stdout).To(ContainSubstring("growing 'base'..."))
+			Expect(stdout).To(ContainSubstring("growing 'ace'..."))
+			Expect(stdout).To(ContainSubstring("growing 'keith'..."))
+		})
+	})
+
+	Context("when the blueprint location is passed as an argument", func() {
+		BeforeEach(func() {
+			curatorRunConfig.RunDir = ""
+			curatorRunConfig.Args = append(curatorRunConfig.Args, "-b", filepath.Join(tempDir, "blueprint.yml"))
+			blueprint = &bprint.Blueprint{Containers: []string{"distant-blueprint"}}
+		})
+
+		It("uses that file as the blueprint", func() {
+			containers, err := client.Containers(garden.Properties{})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(containers).To(HaveLen(1))
+			Expect(containers[0].Handle()).To(Equal("distant-blueprint"))
 		})
 	})
 })
