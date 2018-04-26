@@ -41,8 +41,6 @@ var _ = Describe("Growing", func() {
 			RunDir: tempDir,
 			Args:   []string{"grow"},
 		}
-
-		client = gclient.New(gconn.New("tcp", "10.244.0.2:7777"))
 	})
 
 	JustBeforeEach(func() {
@@ -53,6 +51,8 @@ var _ = Describe("Growing", func() {
 		session := execCurator(curatorRunConfig)
 		session.Wait()
 		stdout = string(session.Out.Contents())
+
+		client = gclient.New(gconn.New("tcp", "10.244.0.2:7777"))
 	})
 
 	AfterEach(func() {
